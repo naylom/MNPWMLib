@@ -1,0 +1,27 @@
+#######################################
+# Syntax Coloring Map For Messenger
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+SetPWM	KEYWORD2
+StopPWM	KEYWORD2
+RestartPWM	KEYWORD2
+StartPWM	KEYWORD2
+pin2MaxTop	KEYWORD2
+BestFit	KEYWORD2
+#######################################
+# Instances (KEYWORD2)
+#######################################
+MNPWMLib	KEYWORD2
+#######################################
+# Constants (LITERAL1)
+#######################################
+
