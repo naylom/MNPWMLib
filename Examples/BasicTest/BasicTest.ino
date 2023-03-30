@@ -4,9 +4,9 @@
 	 optionally using library to get best values to reduce 48Mhz clock to required frequency
 	 optionally using callback routine to something (in this case flash built in led) when duty cycle is up
 */
-MNPWMLib	myPWM ();		// Use default clock divisor of 1 
+MNPWMLib	myPWM (1);		// Use default clock divisor of 1 
 
-constexpr pin_size_t PWMPin	= D1;	// Must be between D0 and D9
+constexpr pin_size_t PWMPin	= 1;	// Must be between D0 and D9
 constexpr uint32_t WantedFrequency = 2;	// hertz
 constexpr pin_size_t BuiltinLEDPin = 6;
 
@@ -14,14 +14,15 @@ constexpr pin_size_t BuiltinLEDPin = 6;
 void PWMDutyCallback ()
 {
 	static int OnOff = 0;
+
 	digitalWrite ( BuiltinLEDPin, OnOff );
-	OnOff == 0 ? 1 : 0;
+	OnOff = OnOff == 0 ? 1 : 0;
 }
 
 void setup()
 {
 	uint16_t prescaler;			// Timer prescaler
-	uint132_t top;				// desired Frequency
+	uint32_t top;				// desired Frequency
 
 	Serial.begin ( 19200 );
 	while ( !Serial );		// wait for serial monitor
@@ -35,7 +36,10 @@ void setup()
 		// stop
 		while ( true );
 	}
-
+	Serial.print ( "Calculated values : prescaler = " );
+	Serial.print ( prescaler );
+	Serial.print ( ", top = " );
+	Serial.println ( top );
 	// start pwm with 50% duty cycle ie top / 2
 	if ( myPWM.SetPWM ( PWMPin, prescaler, top / 2, top, nullptr, PWMDutyCallback ) == false )
 	{

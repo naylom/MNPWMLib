@@ -46,7 +46,7 @@ class MNPWMLib
 	private:
 		static bool bInitialised; // Used to indicate initialisation of TCC done
 		pin_size_t	m_pin;
-		uint16_t	m_top;
+		uint32_t	m_top;
 		uint32_t	m_duty;
 		uint16_t	m_frequency;
 		uint16_t	m_prescaler;

@@ -250,8 +250,8 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	m_pin		= arduinoPin;
 	m_prescaler = prescaler;
 	// validation
-	m_top		= max ( top, 2UL );												  // 2 is the smallest value
-	m_top		= min ( top, PWMTimerInfo [ pPWMData->timerIndex ].counterSize ); // ensure top does not exceed max counter size
+	m_top		= max ( top, (uint32_t)2 );												  // 2 is the smallest value
+	m_top		= min ( m_top, PWMTimerInfo [ pPWMData->timerIndex ].counterSize ); // ensure top does not exceed max counter size
 	m_duty		= min ( duty, m_top );											  // duty must be smaller than top
 #ifdef DEBUG
 	Serial.print ( "PWM set to prescaler = " );
