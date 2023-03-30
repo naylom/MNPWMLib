@@ -1,5 +1,5 @@
 #include "MNPWMLib.h"
-
+#define DEBUG
 /*
 
 	Implementation of MNPWMLib.h
@@ -11,15 +11,23 @@ typedef struct
 		voidFuncPtr OverflowFn;
 		voidFuncPtr MatchFn;
 } PWMPinCallbacks;
-
-constexpr uint8_t MAX_TCC = 3;
-constexpr uint8_t MAX_CCB = 4;
-
+#ifdef DEBUG
+constexpr uint8_t MAX_TCC	= 3;
+constexpr uint8_t MAX_CCB	= 4;
+volatile uint32_t TCC0_H	= 0;
+volatile uint32_t TCC0_H_O	= 0;
+volatile uint32_t TCC0_H_C0 = 0;
+volatile uint32_t TCC0_H_C1 = 0;
+volatile uint32_t TCC0_H_C2 = 0;
+volatile uint32_t TCC0_H_C3 = 0;
+volatile uint32_t TCC1_H	= 0;
+volatile uint32_t TCC2_H	= 0;
+#endif
 class PWMCallback
 {
 	public:
 		PWMCallback ();
-		static bool Set ( voidFuncPtr matchFn, voidFuncPtr overflowFn, Tcc *pTCC, RwReg CCB );
+		static bool Set ( voidFuncPtr matchFn, voidFuncPtr overflowFn, uint8_t TCC, uint8_t CCB );
 		static void Overflow ( Tcc *pTCC, RwReg CCB );
 		static void Match ( Tcc *pTCC, RwReg CCB );
 
@@ -45,17 +53,16 @@ PWMCallback::PWMCallback ()
 	}
 }
 
-bool PWMCallback::Set ( voidFuncPtr matchFn, voidFuncPtr overflowFn, Tcc *pTCC, RwReg CCB )
+bool PWMCallback::Set ( voidFuncPtr matchFn, voidFuncPtr overflowFn, uint8_t TCC, uint8_t CCB )
 {
-	bool	result	 = false;
-	uint8_t indexTCC = ConvertTCC ( pTCC );
-	uint8_t indexCCB = ConvertCCB ( CCB );
-	if ( m_PWMcallbackList [ indexTCC ][ indexCCB ].MatchFn == nullptr && m_PWMcallbackList [ indexTCC ][ indexCCB ].OverflowFn == nullptr )
+	bool result = false;
+	if ( m_PWMcallbackList [ TCC ][ CCB ].MatchFn == nullptr && m_PWMcallbackList [ TCC ][ CCB ].OverflowFn == nullptr )
 	{
-		m_PWMcallbackList [ indexTCC ][ indexCCB ].MatchFn	  = matchFn;
-		m_PWMcallbackList [ indexTCC ][ indexCCB ].OverflowFn = overflowFn;
-		result												  = true;
+		m_PWMcallbackList [ TCC ][ CCB ].MatchFn	= matchFn;
+		m_PWMcallbackList [ TCC ][ CCB ].OverflowFn = overflowFn;
+		result										= true;
 	}
+
 	return result;
 }
 
@@ -123,11 +130,11 @@ uint8_t PWMCallback::ConvertCCB ( RwReg CCB )
 	}
 }
 
-typedef struct PreScalars
+typedef struct 
 {
 		uint16_t value;
 		uint16_t Ref;
-};
+} PreScalars;
 
 PreScalars PreScalarsList [] = {
 	{1,	 TCC_CTRLA_PRESCALER_DIV1	  }, //
@@ -145,7 +152,7 @@ typedef struct
 		const Tcc			   *TCCx;			// Pointer to timer
 		const RwReg			   *REG_TCCx_CTRLA; // Pointer to timer's CTRLA register
 		const RwReg			   *REG_TCCx_WAVE;	// Pointer to timer's WAVE register
-		const RwReg			   *REG_TCCx_PERB;	// Pointer to timer's PERB register
+		const RwReg			   *REG_TCCx_PER;	// Pointer to timer's PERB register
 		const IRQn				IRQNx;			// IRQ for this timer
 		const unsigned long int counterSize;	// Timer's counter size: 24 bits for TCC0 and TCC1, 16 bits for TCC2
 		unsigned int			TCCDiv;			// Timer's clock divider: 1, 2, 4, 8, 16, 64, 256, or 1024
@@ -157,22 +164,14 @@ typedef struct
 
 // prepopulated table
 static PWMTimerData PWMTimerInfo [] = {
-	{TCC0,	&REG_TCC0_CTRLA, &REG_TCC0_WAVE, &REG_TCC0_PERB, TCC0_IRQn, 0xFFFFFF, 1, 500000, true, nullptr, nullptr},
-	{ TCC1, &REG_TCC1_CTRLA, &REG_TCC1_WAVE, &REG_TCC1_PERB, TCC1_IRQn, 0xFFFFFF, 1, 500000, true, nullptr, nullptr},
-	{ TCC2, &REG_TCC2_CTRLA, &REG_TCC2_WAVE, &REG_TCC2_PERB, TCC2_IRQn, 0xFFFF,	1, 50000,  true, nullptr, nullptr}
+	{TCC0,	&REG_TCC0_CTRLA, &REG_TCC0_WAVE, &REG_TCC0_PER, TCC0_IRQn, 0xFFFFFF, 1, 500000, true, nullptr, nullptr},
+	{ TCC1, &REG_TCC1_CTRLA, &REG_TCC1_WAVE, &REG_TCC1_PER, TCC1_IRQn, 0xFFFFFF, 1, 500000, true, nullptr, nullptr},
+	{ TCC2, &REG_TCC2_CTRLA, &REG_TCC2_WAVE, &REG_TCC2_PER, TCC2_IRQn, 0xFFFF,   1, 50000,	 true, nullptr, nullptr}
 };
 static const uint8_t timerTableSize = sizeof ( PWMTimerInfo ) / sizeof ( PWMTimerInfo [ 0 ] );
 
-// prepopulated table of PWM data for arduino pins
+// prepopulated table of PWM data for arduino pins  *** MUST BE IN ARDUINO PIN NUMBER ORDER WITH NO GAPS ***
 static PWMPinData	 PWMPinInfo []	= {
-	//{ 2, PORTA, 10, 1, &REG_TCC1_CCB0, PORT_PMUX_PMUXE_E},
-	//{ 3, PORTA, 11, 1, &REG_TCC1_CCB1, PORT_PMUX_PMUXO_E},
-	//{ 4, PORTB, 10, 0, &REG_TCC0_CCB0, PORT_PMUX_PMUXE_F},
-	//{ 5, PORTB, 11, 0, &REG_TCC0_CCB1, PORT_PMUX_PMUXO_F},
-	//{ 6, PORTA, 20, 0, &REG_TCC0_CCB2, PORT_PMUX_PMUXE_F},
-	//{ 7, PORTA, 21, 0, &REG_TCC0_CCB3, PORT_PMUX_PMUXO_F},
-	//{ 8, PORTA, 16, 2, &REG_TCC2_CCB0, PORT_PMUX_PMUXE_E},
-	//{ 9, PORTA, 17, 2, &REG_TCC2_CCB1, PORT_PMUX_PMUXO_E}
 	{0,	 g_APinDescription [ 0 ].ulPort, g_APinDescription [ 0 ].ulPin, 0, &REG_TCC0_CCB0, 0, PORT_PMUX_PMUXE_F}, // Pin D0
 	{ 1, g_APinDescription [ 1 ].ulPort, g_APinDescription [ 1 ].ulPin, 0, &REG_TCC0_CCB1, 1, PORT_PMUX_PMUXO_F}, // Pin D1
 	{ 2, g_APinDescription [ 2 ].ulPort, g_APinDescription [ 2 ].ulPin, 1, &REG_TCC1_CCB0, 0, PORT_PMUX_PMUXE_E}, // Pin D2
@@ -184,9 +183,10 @@ static PWMPinData	 PWMPinInfo []	= {
 	{ 8, g_APinDescription [ 8 ].ulPort, g_APinDescription [ 8 ].ulPin, 2, &REG_TCC2_CCB0, 0, PORT_PMUX_PMUXE_E}, // Pin D8
 	{ 9, g_APinDescription [ 9 ].ulPort, g_APinDescription [ 9 ].ulPin, 2, &REG_TCC2_CCB1, 1, PORT_PMUX_PMUXO_E}  // Pin D9
 };
-constexpr uint8_t PWMPinInfoTableSize = sizeof ( PWMPinInfo ) / sizeof ( PWMPinInfo [ 0 ] );
+constexpr uint8_t  PWMPinInfoTableSize = sizeof ( PWMPinInfo ) / sizeof ( PWMPinInfo [ 0 ] );
 
-constexpr uint8_t GCLOCK_ID			  = GCLK_CLKCTRL_GEN_GCLK4_Val; // default to GCLK4
+constexpr uint8_t  GCLOCK_ID		   = GCLK_CLKCTRL_GEN_GCLK4_Val; // default to GCLK4
+constexpr uint32_t GCLOCK_SPEED		   = 48000000;					 // this MUST match the dource used below ie GCLK_GENCTRL_SRC_DFLL48M
 
 /// @brief Initialises PWM; uses GCLK4 for time source. Configures TCC0, TCC1, TCC2 and TC3 to use it. This is set
 /// @brief on the first object initialisation so once ClockDivisor is set it is the same for all subsequent objects
@@ -233,14 +233,13 @@ MNPWMLib::MNPWMLib ( uint8_t ClockDivisor )
 
 /// @brief Called to start PWM on a given arduino pin
 /// @param arduinoPin arduinio pin number D2 - D9 supported
-/// @param frequency required frequency
 /// @param prescaler required prescaler setting
 /// @param duty duty value, must be less than top, from 0 to this output is HIGH
 /// @param top value at which output is reset to LOW, min value is 2, max depends on TCC allocated to this pin 24 bit for TCC0 & 1, 16 bit for TCC2
 /// @param OverflowFn optional interrupt level routine to be called when counter matches top
 /// @param MatchFn optional interrupt level routine to be called when counter matches duty level
 /// @return true if successful
-bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t frequency, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn, voidFuncPtr MatchFn )
+bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn, voidFuncPtr MatchFn )
 {
 	// Check pin is valid
 	PWMPinData *pPWMData = GetPinInfo ( arduinoPin );
@@ -248,16 +247,41 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t frequency, uint16_t pres
 	{
 		return false;
 	}
-	m_pin																 = arduinoPin;
-	m_prescaler															 = prescaler;
+	m_pin		= arduinoPin;
+	m_prescaler = prescaler;
 	// validation
-	m_top																 = max ( top, 2 );												   // 2 is the smallest value
-	m_top																 = min ( top, PWMTimerInfo [ pPWMData->timerIndex ].counterSize ); // ensure top does not exceed max counter size
-	m_duty																 = max ( duty, m_top );											   // duty must be smaller than top
+	m_top		= max ( top, 2UL );												  // 2 is the smallest value
+	m_top		= min ( top, PWMTimerInfo [ pPWMData->timerIndex ].counterSize ); // ensure top does not exceed max counter size
+	m_duty		= min ( duty, m_top );											  // duty must be smaller than top
+#ifdef DEBUG
+	Serial.print ( "PWM set to prescaler = " );
+	Serial.print ( m_prescaler );
+	Serial.print ( " duty = " );
+	Serial.print ( m_duty );
+	Serial.print ( " top = " );
+	Serial.print ( m_top );
+	Serial.print ( " on arduino pin = " );
+	Serial.print ( m_pin );
+	Serial.print ( " samd pin = " );
+	Serial.print ( pPWMData->samd21Pin );
+	Serial.print ( " samd port = " );
+	Serial.print ( pPWMData->port );
+	Serial.print ( " samd TCC = " );
+	Serial.print ( pPWMData->timerIndex );
+	Serial.print ( " samd MC = " );
+	Serial.print ( pPWMData->MCx );
 
+	if ( MatchFn != nullptr )
+	{
+		Serial.print ( ", match interrupts enabled" );
+	}
+	if ( OverflowFn != nullptr )
+	{
+		Serial.print ( " , overflow interrupts enabled" );
+	}
+	Serial.println ();
+#endif
 	// Step 2, now route the generated clock signal to the TCC (Timer Counter for Control) module
-
-	// Mkr Wifi 1010 pinout sheet shows PA23 = digital pin 1
 
 	PORT->Group [ pPWMData->port ].PINCFG [ pPWMData->samd21Pin ].reg	 |= PORT_PINCFG_PMUXEN;
 	PORT->Group [ pPWMData->port ].PMUX [ pPWMData->samd21Pin >> 1 ].reg |= pPWMData->Mux;
@@ -268,18 +292,11 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t frequency, uint16_t pres
 	// TCC1 has 2 24 bit channels (CCn) that map to 4 waveform outouts (WOn)
 	// TCC2 has 2 16 bit channels (CCn) that map to 2 waveform outouts (WOn)
 
-	// REG_TCC1_WAVE														 |= TCC_WAVE_WAVEGEN_NPWM;						 // Single-slope PWM
-	*(RwReg *)PWMTimerInfo [ pPWMData->timerIndex ].REG_TCCx_WAVE		 |= TCC_WAVE_WAVEGEN_NPWM; // Single-slope PWM
-	while ( PWMTimerInfo [ pPWMData->timerIndex ].TCCx->SYNCBUSY.bit.WAVE )
-		;
+	SetPWMType ( TCC_WAVE_WAVEGEN_NPWM ); // Single-slope PWM
 
-	// REG_TCC1_PER												   = top;										   // Set TOP
-	*(RwReg *)PWMTimerInfo [ pPWMData->timerIndex ].REG_TCCx_PERB |= m_top; // Set TOP
-	while ( PWMTimerInfo [ pPWMData->timerIndex ].TCCx->SYNCBUSY.bit.PERB )
-		;
+	SetPWMTop ( m_top );
 
-	// REG_TCC1_CTRLA												   |= TCC_CTRLA_PRESCALER_DIV1 | TCC_CTRLA_ENABLE; // Requires SYNC on CTRLA
-	// convert prescaler value to define
+	// convert prescaler value to const used by TCC
 	uint8_t i;
 	for ( i = 0; i < sizeof ( PreScalarsList ) / sizeof ( PreScalarsList [ 0 ] ); i++ )
 	{
@@ -292,21 +309,11 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t frequency, uint16_t pres
 	{
 		i = 0;
 	}
+	// set prescaler & enable
 	*(RwReg *)PWMTimerInfo [ pPWMData->timerIndex ].REG_TCCx_CTRLA |= PreScalarsList [ i ].Ref | TCC_CTRLA_ENABLE; // Requires SYNC on CTRLA
 
-	// while ( TCC1->SYNCBUSY.bit.ENABLE || TCC1->SYNCBUSY.bit.WAVE || TCC1->SYNCBUSY.bit.PER )
-	//	;
-
 	// Step 4, Set PWM duty cycle
-
-	*(RwReg *)pPWMData->REG_TCCx_CCBy							   = m_duty;
-	while ( PWMTimerInfo [ pPWMData->timerIndex ].TCCx->SYNCBUSY.vec.CCB )
-		;
-	// while ( PWMTimerInfo [ pPWMData->timerIndex ].TCCx->SYNCBUSY.vec.CCB )
-	//	;
-	//  REG_TCC1_CCB0 = duty; // Set DUTY
-	//  while ( TCC1->SYNCBUSY.bit.CCB0 )
-	//;
+	SetDuty ( m_duty, pPWMData );
 
 	// See if user has provided a function to be called when either an overflow or match occurs
 	if ( OverflowFn != nullptr || MatchFn != nullptr )
@@ -316,22 +323,15 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t frequency, uint16_t pres
 		NVIC_ClearPendingIRQ ( PWMTimerInfo [ pPWMData->timerIndex ].IRQNx );
 		NVIC_SetPriority ( PWMTimerInfo [ pPWMData->timerIndex ].IRQNx, 0 ); // Set the Nested Vector Interrupt Controller (NVIC) priority
 		NVIC_EnableIRQ ( PWMTimerInfo [ pPWMData->timerIndex ].IRQNx );		 // Connect TCC to Nested Vector Interrupt Controller (NVIC)
-		// NVIC_DisableIRQ ( TCC1_IRQn );
-		// NVIC_ClearPendingIRQ ( TCC1_IRQn );
-		// NVIC_SetPriority ( TCC1_IRQn, 0 ); // Set the Nested Vector Interrupt Controller (NVIC) priority
-		// NVIC_EnableIRQ ( TCC1_IRQn );	   // Connect TC0 to Nested Vector Interrupt Controller (NVIC)
 
+		pwmCallbacks.Set ( MatchFn, OverflowFn, pPWMData->timerIndex, pPWMData->MCx );
 		if ( OverflowFn != nullptr )
 		{
 			( (Tcc *)( PWMTimerInfo [ pPWMData->timerIndex ].TCCx ) )->INTENSET.bit.OVF = 1; // Enable Interrupts when time counter reaches TOP
-																							 // TCC1->INTENSET.bit.OVF = 1;
 		}
 		if ( MatchFn != nullptr )
 		{
-			// needs to change MC0/MC1 based CCB in table
-			//( (Tcc *)( PWMTimerInfo [ pPWMData->timerIndex ].TCCx ) )->INTENSET.bit.MC0 = 1 ; // Enable interrupts when timer counter matches duty value
 			( (Tcc *)( PWMTimerInfo [ pPWMData->timerIndex ].TCCx ) )->INTENSET.vec.MC = 1 << pPWMData->MCx; // Enable interrupts when timer counter matches duty value
-																							 // TCC1->INTENSET.bit.MC0 = 1;
 		}
 	}
 	return true;
@@ -340,13 +340,35 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t frequency, uint16_t pres
 /// @brief Disables TCC
 void MNPWMLib::StopPWM ()
 {
-	*(RwReg *)PWMTimerInfo [ m_pin ].REG_TCCx_CTRLA &= ~( TCC_CTRLA_ENABLE );
-	while ( PWMTimerInfo [ m_pin ].TCCx->SYNCBUSY.bit.ENABLE )
-		;
+	// Stops timer so all pins using it will be impacted! Better to set duty = 2 or top?
+	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_STOP; // Stop the timer
+	SyncCtrlBReg ();
+}
+
+inline void MNPWMLib::SyncCtrlBReg ()
+{
+	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.CTRLB )
+		; // Wait for synchronization
+}
+
+inline void MNPWMLib::SetPWMType ( uint32_t PWMType )
+{
+	*(RwReg *)PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].REG_TCCx_WAVE |= PWMType; // Single-slope PWM
+	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.WAVE )
+		; // Wait for synchronization
+}
+
+inline void MNPWMLib::SetPWMTop ( uint32_t PWMTop )
+{
+	*(RwReg *)PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].REG_TCCx_PER = PWMTop;
+	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.PERB )
+		; // Wait for synchronization
 }
 
 void MNPWMLib::RestartPWM ()
 {
+	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart a stopped timer or reset a stopped one
+	SyncCtrlBReg ();
 }
 
 /// @brief Enables TCC
@@ -367,9 +389,20 @@ inline uint32_t MNPWMLib::pin2SAMD21 ( pin_size_t arduinoPin )
 	return PWMPinInfo [ PinData ( arduinoPin ) ].samd21Pin;
 }
 
+/// @brief Find the TCC allocated to the pin, note there is one TOP value per TCC
+/// @param arduinoPin to check, must be 0 - 9
+/// @return index of TCC ie 0 - 2 inclusive
 inline uint8_t MNPWMLib::pin2TCCx ( pin_size_t arduinoPin )
 {
 	return PWMPinInfo [ PinData ( arduinoPin ) ].timerIndex;
+}
+
+/// @brief Find the CC allocated to the pin
+/// @param arduinoPin to check, must be 0 - 9
+/// @return index of CCx ie 0 - 3 inclusive
+inline uint8_t MNPWMLib::pin2CCx ( pin_size_t arduinoPin )
+{
+	return PWMPinInfo [ PinData ( arduinoPin ) ].MCx;
 }
 
 /// @brief Gets the maximum TOP value for a given arduino pin
@@ -388,6 +421,8 @@ inline uint32_t MNPWMLib::pin2MaxTop ( pin_size_t arduinoPin )
 	return result;
 }
 
+#define MAX_SCALAR PrescalarValues [ sizeof ( PrescalarValues ) / sizeof ( PrescalarValues [ 0 ] ) - 1 ]
+
 /// @brief Attempts to find the best prescalar and top for required frequency
 /// @param arduinoPin pin to be used must be between 0 - 9 inclusive
 /// @param wantedFreq the frequency wanted
@@ -398,22 +433,24 @@ bool MNPWMLib::BestFit ( pin_size_t arduinoPin, uint16_t wantedFreq, uint16_t &p
 {
 	bool				  result			 = false;
 	static const uint16_t PrescalarValues [] = { 1, 2, 4, 8, 16, 64, 256, 1024 }; // must be in ascending order
-#define MAX_SCALAR PrescalarValues [ sizeof ( PrescalarValues ) / sizeof ( PrescalarValues [ 0 ] ) - 1 ]
+
+	// Get clock ticks after divisor applied
+	uint32_t			  clock_rate		 = GCLOCK_SPEED / m_clockDivisor;
 	// Get max top for the supplied pin
-	uint32_t maxtop = pin2MaxTop ( arduinoPin );
+	uint32_t			  maxtop			 = pin2MaxTop ( arduinoPin );
 	if ( maxtop != 0 )
 	{
-		if ( F_CPU / MAX_SCALAR <= maxtop ) // check max prescalar
+		if ( clock_rate / MAX_SCALAR <= maxtop ) // check max prescalar
 		{
 			// can be calculated with clock divisor of 1
 			uint32_t bestDiff = 0xFFFFFFFF;
 			for ( uint8_t i = 0; i < sizeof ( PrescalarValues ) / sizeof ( PrescalarValues [ 0 ] ); i++ )
 			{
-				uint32_t candidate = F_CPU / wantedFreq / PrescalarValues [ i ];
+				uint32_t candidate = clock_rate / wantedFreq / PrescalarValues [ i ];
 				if ( candidate < maxtop )
 				{
 					// see how good this is
-					uint32_t diff = abs ( int32_t ( wantedFreq - ( candidate * F_CPU * PrescalarValues [ i ] ) ) );
+					uint32_t diff = abs ( int32_t ( clock_rate - wantedFreq * candidate * PrescalarValues [ i ] ) );
 					if ( diff < bestDiff )
 					{
 						bestDiff  = diff;
@@ -429,6 +466,28 @@ bool MNPWMLib::BestFit ( pin_size_t arduinoPin, uint16_t wantedFreq, uint16_t &p
 			}
 		}
 	}
+#ifdef DEBUG
+	Serial.print ( "Calculating settings for PWM on pin " );
+	Serial.print ( arduinoPin );
+	Serial.print ( " @  requested frequency of " );
+	Serial.print ( wantedFreq );
+	Serial.println ( " Hz" );
+	if ( result )
+	{
+		Serial.print ( "Results: prescaler = " );
+		Serial.print ( prescaler );
+		Serial.print ( " top = " );
+		Serial.print ( top );
+		Serial.print ( " calculated frequency = " );
+		Serial.print ( clock_rate / prescaler / top );
+		Serial.println ( "Hz" );
+	}
+	else
+	{
+		Serial.print ( "could not be calculated" );
+	}
+#endif
+
 	return result;
 }
 
@@ -454,7 +513,6 @@ uint8_t MNPWMLib::PinData ( uint8_t arduinoPin )
 
 PWMPinData *MNPWMLib::GetPinInfo ( pin_size_t arduinoPin )
 {
-	PWMPinData *pResult = nullptr;
 	for ( uint8_t i = 0; i < PWMPinInfoTableSize; i++ )
 	{
 		if ( PWMPinInfo [ i ].arduinoPin == arduinoPin )
@@ -465,57 +523,92 @@ PWMPinData *MNPWMLib::GetPinInfo ( pin_size_t arduinoPin )
 	return nullptr;
 }
 
+void MNPWMLib::SetDuty ( uint32_t duty, PWMPinData *pData )
+{
+	*(RwReg *)pData->REG_TCCx_CCBy = duty;
+	while ( PWMTimerInfo [ pData->timerIndex ].TCCx->SYNCBUSY.vec.CCB )
+		;
+}
+
 /// @brief Interrupt Service Routine (ISR) for timer TCC0
 void TCC0_Handler ()
 {
+#ifdef DEBUG
+	TCC0_H++;
+#endif
 	if ( TCC0->INTENSET.bit.OVF && TCC0->INTFLAG.bit.OVF )
 	{
+#ifdef DEBUG
+		TCC0_H_O++;
+#endif
+		// Invoke all user overflow routines for this TCC which only has 2 match counters
 		pwmCallbacks.Overflow ( TCC0, REG_TCC0_CCB0 );
+		pwmCallbacks.Overflow ( TCC0, REG_TCC0_CCB1 );
+		pwmCallbacks.Overflow ( TCC0, REG_TCC0_CCB2 );
+		pwmCallbacks.Overflow ( TCC0, REG_TCC0_CCB3 );
 		TCC0->INTFLAG.bit.OVF = 1;
 	}
 	else if ( TCC0->INTENSET.bit.MC0 && TCC0->INTFLAG.bit.MC0 )
 	{
+#ifdef DEBUG
+		TCC0_H_C0++;
+#endif
 		// have we matched the DUTY value?
 		pwmCallbacks.Match ( TCC0, REG_TCC0_CCB0 );
 		TCC0->INTFLAG.bit.MC0 = 1;
 	}
 	else if ( TCC0->INTENSET.bit.MC1 && TCC0->INTFLAG.bit.MC1 )
 	{
+#ifdef DEBUG
+		TCC0_H_C1++;
+#endif
 		// have we matched the DUTY value?
 		pwmCallbacks.Match ( TCC0, REG_TCC0_CCB1 );
 		TCC0->INTFLAG.bit.MC1 = 1;
 	}
 	else if ( TCC0->INTENSET.bit.MC2 && TCC0->INTFLAG.bit.MC2 )
 	{
+#ifdef DEBUG
+		TCC0_H_C2++;
+#endif
 		// have we matched the DUTY value?
 		pwmCallbacks.Match ( TCC0, REG_TCC0_CCB2 );
-		TCC0->INTFLAG.bit.MC1 = 2;
+		TCC0->INTFLAG.bit.MC2 = 1;
 	}
 	else if ( TCC0->INTENSET.bit.MC3 && TCC0->INTFLAG.bit.MC3 )
 	{
+#ifdef DEBUG
+		TCC0_H_C3++;
+#endif
 		// have we matched the DUTY value?
 		pwmCallbacks.Match ( TCC0, REG_TCC0_CCB3 );
-		TCC0->INTFLAG.bit.MC1 = 3;
+		TCC0->INTFLAG.bit.MC3 = 1;
 	}
 }
 
 /// @brief Interrupt Service Routine (ISR) for timer TCC1
 void TCC1_Handler () // Interrupt Service Routine (ISR) for timer TCC1
 {
+#ifdef DEBUG
+	TCC1_H++;
+#endif
 	if ( TCC1->INTENSET.bit.OVF && TCC1->INTFLAG.bit.OVF )
 	{
+		// Invoke all user overflow routines for this TCC which only has 2 match counters
+		pwmCallbacks.Overflow ( TCC1, REG_TCC1_CCB0 );
+		pwmCallbacks.Overflow ( TCC1, REG_TCC1_CCB1 );
 		TCC1->INTFLAG.bit.OVF = 1;
 	}
 	else if ( TCC1->INTENSET.bit.MC0 && TCC1->INTFLAG.bit.MC0 )
 	{
 		// have we matched the DUTY value?
-		pwmCallbacks.Match ( TCC1, REG_TCC0_CCB0 );
+		pwmCallbacks.Match ( TCC1, REG_TCC1_CCB0 );
 		TCC1->INTFLAG.bit.MC0 = 1;
 	}
 	else if ( TCC1->INTENSET.bit.MC1 && TCC1->INTFLAG.bit.MC1 )
 	{
 		// have we matched the DUTY value?
-		pwmCallbacks.Match ( TCC1, REG_TCC0_CCB1 );
+		pwmCallbacks.Match ( TCC1, REG_TCC1_CCB1 );
 		TCC1->INTFLAG.bit.MC1 = 1;
 	}
 }
@@ -523,20 +616,26 @@ void TCC1_Handler () // Interrupt Service Routine (ISR) for timer TCC1
 /// @brief Interrupt Service Routine (ISR) for timer TCC2
 void TCC2_Handler () // Interrupt Service Routine (ISR) for timer TCC2
 {
+#ifdef DEBUG
+	TCC2_H++;
+#endif
 	if ( TCC2->INTENSET.bit.OVF && TCC2->INTFLAG.bit.OVF )
 	{
+		// Invoke all user overflow routines for this TCC which only has 2 match counters
+		pwmCallbacks.Overflow ( TCC2, REG_TCC2_CCB0 );
+		pwmCallbacks.Overflow ( TCC2, REG_TCC2_CCB1 );
 		TCC2->INTFLAG.bit.OVF = 1;
 	}
 	else if ( TCC2->INTENSET.bit.MC0 && TCC2->INTFLAG.bit.MC0 )
 	{
 		// have we matched the DUTY value?
-		pwmCallbacks.Match ( TCC2, REG_TCC0_CCB0 );
+		pwmCallbacks.Match ( TCC2, REG_TCC2_CCB0 );
 		TCC2->INTFLAG.bit.MC0 = 1;
 	}
 	else if ( TCC2->INTENSET.bit.MC1 && TCC2->INTFLAG.bit.MC1 )
 	{
 		// have we matched the DUTY value?
-		pwmCallbacks.Match ( TCC2, REG_TCC0_CCB1 );
+		pwmCallbacks.Match ( TCC2, REG_TCC2_CCB1 );
 		TCC2->INTFLAG.bit.MC1 = 1;
 	}
 }

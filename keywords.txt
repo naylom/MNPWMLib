@@ -16,6 +16,7 @@ StopPWM	KEYWORD2
 RestartPWM	KEYWORD2
 StartPWM	KEYWORD2
 pin2MaxTop	KEYWORD2
+pin2TCCx	KEYWORD2
 BestFit	KEYWORD2
 #######################################
 # Instances (KEYWORD2)
