@@ -337,14 +337,6 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	return true;
 }
 
-/// @brief Disables TCC
-void MNPWMLib::StopPWM ()
-{
-	// Stops timer so all pins using it will be impacted! Better to set duty = 2 or top?
-	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_STOP; // Stop the timer
-	SyncCtrlBReg ();
-}
-
 inline void MNPWMLib::SyncCtrlBReg ()
 {
 	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.CTRLB )
@@ -363,6 +355,15 @@ inline void MNPWMLib::SetPWMTop ( uint32_t PWMTop )
 	*(RwReg *)PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].REG_TCCx_PER = PWMTop;
 	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.PERB )
 		; // Wait for synchronization
+}
+
+/// @brief Disables TCC
+void MNPWMLib::StopPWM ()
+{
+	// Stops timer so all pins using it will be impacted! Better to set duty = 2 or top?
+	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_STOP; // Stop the timer
+	SyncCtrlBReg ();
+
 }
 
 void MNPWMLib::RestartPWM ()
