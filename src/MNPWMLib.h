@@ -38,6 +38,7 @@ class MNPWMLib
 		void	 StopPWM ();
 		void	 RestartPWM ();
 		void	 StartPWM ();
+		bool 	 IsStarted ();
 		uint32_t pin2MaxTop ( pin_size_t arduinoPin );
 		uint8_t	 pin2TCCx ( pin_size_t arduinoPin );
 		uint8_t	 pin2CCx ( pin_size_t arduinoPin );
@@ -51,6 +52,7 @@ class MNPWMLib
 		uint16_t	m_frequency;
 		uint16_t	m_prescaler;
 		uint8_t		m_clockDivisor;
+		bool		m_bIsStarted;
 		int8_t		pin2Port ( pin_size_t arduinoPin );
 		uint32_t	pin2SAMD21 ( pin_size_t arduinoPin );
 		uint32_t	pin2PortMUX ( pin_size_t arduinoPin );

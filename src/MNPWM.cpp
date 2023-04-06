@@ -228,6 +228,7 @@ MNPWMLib::MNPWMLib ( uint8_t ClockDivisor )
 			;
 		m_clockDivisor = ClockDivisor;
 		bInitialised   = true;
+		m_bIsStarted = false;
 	}
 }
 
@@ -312,8 +313,8 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	// set prescaler & enable
 	*(RwReg *)PWMTimerInfo [ pPWMData->timerIndex ].REG_TCCx_CTRLA |= PreScalarsList [ i ].Ref | TCC_CTRLA_ENABLE; // Requires SYNC on CTRLA
 
-	// Step 4, Set PWM duty cycle
 	SetDuty ( m_duty, pPWMData );
+	m_bIsStarted = true;
 
 	// See if user has provided a function to be called when either an overflow or match occurs
 	if ( OverflowFn != nullptr || MatchFn != nullptr )
@@ -357,19 +358,27 @@ inline void MNPWMLib::SetPWMTop ( uint32_t PWMTop )
 		; // Wait for synchronization
 }
 
+/// @brief Checks if PWM is running
+/// @return true if running, false otherwise
+bool MNPWMLib::IsStarted ()
+{
+	return m_bIsStarted;
+}
+
 /// @brief Disables TCC
 void MNPWMLib::StopPWM ()
 {
 	// Stops timer so all pins using it will be impacted! Better to set duty = 2 or top?
 	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_STOP; // Stop the timer
 	SyncCtrlBReg ();
-
+	m_bIsStarted = false;
 }
 
 void MNPWMLib::RestartPWM ()
 {
 	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart a stopped timer or reset a stopped one
 	SyncCtrlBReg ();
+	m_bIsStarted = true;
 }
 
 /// @brief Enables TCC
