@@ -70,5 +70,5 @@ class MNPWMLib
 		void		SyncCtrlBReg ();
 		void		SetPWMType ( uint32_t PWMType );
 		void		SetPWMTop ( uint32_t PWMTop );
-		void		SetPWMWhenStopped ( pin_size_t pin, PinStatus defaultState );
+		void 		SetCount ( uint32_t count );
 };

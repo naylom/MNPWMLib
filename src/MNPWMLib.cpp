@@ -338,12 +338,11 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 		}
 		if ( MatchFn != nullptr )
 		{
-			( (Tcc *)pin2Tcc ( m_pin ) )->INTENSET.vec.MC = 1 << pPWMData->MCx; // Enable interrupts when timer counter matches duty value
+			( (Tcc *)pin2Tcc ( m_pin ) )->INTENSET.vec.MC |= 1 << pPWMData->MCx; // Enable interrupts when timer counter matches duty value
 		}
 	}
 	return true;
 }
-
 /// @brief Controls the state of the pin when PWM is stopped
 /// @param defaultState set to HIGH or LOW as required
 void MNPWMLib::SetPWMWhenStopped ( PinStatus defaultState )
@@ -395,7 +394,6 @@ inline void MNPWMLib::DisablePinStateWhenStopped ()
 /// @brief Waits for CTRL B register to sync before continuing
 inline void MNPWMLib::SyncCtrlBReg ()
 {
-	pin2TCCIndex ( m_pin );
 	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.CTRLB )
 		; // Wait for synchronization
 }
@@ -412,7 +410,7 @@ inline void MNPWMLib::SetPWMType ( uint32_t PWMType )
 inline void MNPWMLib::SetPWMTop ( uint32_t PWMTop )
 {
 	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_PER = PWMTop;
-	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.PERB )
+	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.PER )
 		; // Wait for synchronization
 }
 
@@ -435,6 +433,7 @@ void MNPWMLib::StopPWM ()
 /// @brief Restarts the TCC clock
 void MNPWMLib::RestartPWM ()
 {
+	SetCount ( 0 ); // reset to 0
 	( (Tcc *)pin2Tcc ( m_pin ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart a stopped timer or reset a stopped one
 	SyncCtrlBReg ();
 	m_bIsRunning = true;
@@ -445,6 +444,16 @@ void MNPWMLib::StartPWM ()
 {
 	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_CTRLA |= TCC_CTRLA_ENABLE;
 	while ( pin2Tcc ( m_pin )->SYNCBUSY.bit.ENABLE )
+		;
+}
+
+void MNPWMLib::SetCount ( uint32_t count )
+{
+	// reset the count to 0
+	Tcc * pinTCC = (Tcc *)pin2Tcc ( m_pin );
+	pinTCC->COUNT.reg = count & TCC_COUNT_MASK; // max 24 bits
+	//TCC0->COUNT.reg = count & TCC_COUNT_MASK; // max 24 bits
+	while ( pinTCC->SYNCBUSY.bit.COUNT )		  // Wait for synchronization
 		;
 }
 
