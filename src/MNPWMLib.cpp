@@ -296,9 +296,12 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	// TCC2 has 2 16 bit channels (CCn) that map to 2 waveform outouts (WOn)
 
 	SetPWMType ( TCC_WAVE_WAVEGEN_NPWM ); // Single-slope PWM (aka Fast PWM, aka Normal PWM)
-
+	
 	SetPWMTop ( m_top );
+
+	// Set PWM signal to go LOW when PWM stopped
 	SetPWMWhenStopped ( LOW );
+
 	// convert prescaler value to const used by TCC
 	uint8_t i;
 	for ( i = 0; i < sizeof ( PreScalarsList ) / sizeof ( PreScalarsList [ 0 ] ); i++ )
@@ -312,7 +315,7 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	{
 		i = 0;
 	}
-	// Set PWM signal to LOW when PWM stopped
+	
 	// set prescaler & enable
 	*(RwReg *)PWMTimerInfo [ pPWMData->timerIndex ].REG_TCCx_CTRLA |= PreScalarsList [ i ].Ref | TCC_CTRLA_ENABLE; // Requires SYNC on CTRLA
 
@@ -389,6 +392,7 @@ inline void MNPWMLib::DisablePinStateWhenStopped ()
 	}
 }
 
+/// @brief Waits for CTRL B register to sync before continuing
 inline void MNPWMLib::SyncCtrlBReg ()
 {
 	pin2TCCIndex ( m_pin );
@@ -398,11 +402,13 @@ inline void MNPWMLib::SyncCtrlBReg ()
 
 inline void MNPWMLib::SetPWMType ( uint32_t PWMType )
 {
-	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_WAVE |= PWMType; // Single-slope PWM
+	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_WAVE |= PWMType; 
 	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.WAVE )
 		; // Wait for synchronization
 }
 
+/// @brief Sets the max value for the TCC counter at which point it is reset and generates an overflow interrupt if set
+/// @param PWMTop value for top
 inline void MNPWMLib::SetPWMTop ( uint32_t PWMTop )
 {
 	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_PER = PWMTop;
@@ -426,6 +432,7 @@ void MNPWMLib::StopPWM ()
 	m_bIsRunning = false;
 }
 
+/// @brief Restarts the TCC clock
 void MNPWMLib::RestartPWM ()
 {
 	( (Tcc *)pin2Tcc ( m_pin ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart a stopped timer or reset a stopped one
@@ -441,6 +448,9 @@ void MNPWMLib::StartPWM ()
 		;
 }
 
+/// @brief Gives the port number assocaited with the pin
+/// @param arduinoPin pin number of interest must be 0 - 9 inclusive
+/// @return 
 inline int8_t MNPWMLib::pin2Port ( pin_size_t arduinoPin )
 {
 	return PWMPinInfo [ PinData ( arduinoPin ) ].port;
@@ -459,6 +469,9 @@ inline uint8_t MNPWMLib::pin2TCCIndex ( pin_size_t arduinoPin )
 	return PWMPinInfo [ arduinoPin ].timerIndex;
 }
 
+/// @brief Gives the TCC register for the pin specified
+/// @param arduinoPin must be 0 - 9 inclusive
+/// @return pointer to TCC register
 inline const Tcc *MNPWMLib::pin2Tcc ( pin_size_t arduinoPin )
 {
 	return PWMTimerInfo [ pin2TCCIndex ( arduinoPin ) ].TCCx;
