@@ -1,5 +1,6 @@
 #include "MNPWMLib.h"
 #define DEBUG
+
 /*
 
 	Implementation of MNPWMLib.h
@@ -130,7 +131,7 @@ uint8_t PWMCallback::ConvertCCB ( RwReg CCB )
 	}
 }
 
-typedef struct 
+typedef struct
 {
 		uint16_t value;
 		uint16_t Ref;
@@ -160,10 +161,10 @@ typedef struct
 		bool					enabled;		// Shows if TCCx should be enabled
 		voidFuncPtr				OverflowFn;
 		voidFuncPtr				MatchFn;
-} PWMTimerData;
+} PWMTCCData;
 
 // prepopulated table
-static PWMTimerData PWMTimerInfo [] = {
+static PWMTCCData PWMTimerInfo [] = {
 	{TCC0,	&REG_TCC0_CTRLA, &REG_TCC0_WAVE, &REG_TCC0_PER, TCC0_IRQn, 0xFFFFFF, 1, 500000, true, nullptr, nullptr},
 	{ TCC1, &REG_TCC1_CTRLA, &REG_TCC1_WAVE, &REG_TCC1_PER, TCC1_IRQn, 0xFFFFFF, 1, 500000, true, nullptr, nullptr},
 	{ TCC2, &REG_TCC2_CTRLA, &REG_TCC2_WAVE, &REG_TCC2_PER, TCC2_IRQn, 0xFFFF,   1, 50000,	 true, nullptr, nullptr}
@@ -172,16 +173,16 @@ static const uint8_t timerTableSize = sizeof ( PWMTimerInfo ) / sizeof ( PWMTime
 
 // prepopulated table of PWM data for arduino pins  *** MUST BE IN ARDUINO PIN NUMBER ORDER WITH NO GAPS ***
 static PWMPinData	 PWMPinInfo []	= {
-	{0,	 g_APinDescription [ 0 ].ulPort, g_APinDescription [ 0 ].ulPin, 0, &REG_TCC0_CCB0, 0, PORT_PMUX_PMUXE_F}, // Pin D0
-	{ 1, g_APinDescription [ 1 ].ulPort, g_APinDescription [ 1 ].ulPin, 0, &REG_TCC0_CCB1, 1, PORT_PMUX_PMUXO_F}, // Pin D1
-	{ 2, g_APinDescription [ 2 ].ulPort, g_APinDescription [ 2 ].ulPin, 1, &REG_TCC1_CCB0, 0, PORT_PMUX_PMUXE_E}, // Pin D2
-	{ 3, g_APinDescription [ 3 ].ulPort, g_APinDescription [ 3 ].ulPin, 1, &REG_TCC1_CCB1, 1, PORT_PMUX_PMUXO_E}, // Pin D3
-	{ 4, g_APinDescription [ 4 ].ulPort, g_APinDescription [ 4 ].ulPin, 0, &REG_TCC0_CCB0, 0, PORT_PMUX_PMUXE_F}, // Pin D4
-	{ 5, g_APinDescription [ 5 ].ulPort, g_APinDescription [ 5 ].ulPin, 0, &REG_TCC0_CCB1, 1, PORT_PMUX_PMUXO_F}, // Pin D5
-	{ 6, g_APinDescription [ 6 ].ulPort, g_APinDescription [ 6 ].ulPin, 0, &REG_TCC0_CCB2, 2, PORT_PMUX_PMUXE_F}, // Pin D6
-	{ 7, g_APinDescription [ 7 ].ulPort, g_APinDescription [ 7 ].ulPin, 0, &REG_TCC0_CCB3, 3, PORT_PMUX_PMUXO_F}, // Pin D7
-	{ 8, g_APinDescription [ 8 ].ulPort, g_APinDescription [ 8 ].ulPin, 2, &REG_TCC2_CCB0, 0, PORT_PMUX_PMUXE_E}, // Pin D8
-	{ 9, g_APinDescription [ 9 ].ulPort, g_APinDescription [ 9 ].ulPin, 2, &REG_TCC2_CCB1, 1, PORT_PMUX_PMUXO_E}  // Pin D9
+	{0,	 g_APinDescription [ 0 ].ulPort, g_APinDescription [ 0 ].ulPin, 0, &REG_TCC0_CCB0, 0, PORT_PMUX_PMUXE_F, 4}, // Pin D0
+	{ 1, g_APinDescription [ 1 ].ulPort, g_APinDescription [ 1 ].ulPin, 0, &REG_TCC0_CCB1, 1, PORT_PMUX_PMUXO_F, 5}, // Pin D1
+	{ 2, g_APinDescription [ 2 ].ulPort, g_APinDescription [ 2 ].ulPin, 1, &REG_TCC1_CCB0, 0, PORT_PMUX_PMUXE_E, 2}, // Pin D2
+	{ 3, g_APinDescription [ 3 ].ulPort, g_APinDescription [ 3 ].ulPin, 1, &REG_TCC1_CCB1, 1, PORT_PMUX_PMUXO_E, 3}, // Pin D3
+	{ 4, g_APinDescription [ 4 ].ulPort, g_APinDescription [ 4 ].ulPin, 0, &REG_TCC0_CCB0, 0, PORT_PMUX_PMUXE_F, 4}, // Pin D4
+	{ 5, g_APinDescription [ 5 ].ulPort, g_APinDescription [ 5 ].ulPin, 0, &REG_TCC0_CCB1, 1, PORT_PMUX_PMUXO_F, 5}, // Pin D5
+	{ 6, g_APinDescription [ 6 ].ulPort, g_APinDescription [ 6 ].ulPin, 0, &REG_TCC0_CCB2, 2, PORT_PMUX_PMUXE_F, 6}, // Pin D6
+	{ 7, g_APinDescription [ 7 ].ulPort, g_APinDescription [ 7 ].ulPin, 0, &REG_TCC0_CCB3, 3, PORT_PMUX_PMUXO_F, 7}, // Pin D7
+	{ 8, g_APinDescription [ 8 ].ulPort, g_APinDescription [ 8 ].ulPin, 2, &REG_TCC2_CCB0, 0, PORT_PMUX_PMUXE_E, 6}, // Pin D8
+	{ 9, g_APinDescription [ 9 ].ulPort, g_APinDescription [ 9 ].ulPin, 2, &REG_TCC2_CCB1, 1, PORT_PMUX_PMUXO_E, 7}  // Pin D9
 };
 constexpr uint8_t  PWMPinInfoTableSize = sizeof ( PWMPinInfo ) / sizeof ( PWMPinInfo [ 0 ] );
 
@@ -228,12 +229,12 @@ MNPWMLib::MNPWMLib ( uint8_t ClockDivisor )
 			;
 		m_clockDivisor = ClockDivisor;
 		bInitialised   = true;
-		m_bIsStarted = false;
+		m_bIsRunning   = false;
 	}
 }
 
 /// @brief Called to start PWM on a given arduino pin
-/// @param arduinoPin arduinio pin number D2 - D9 supported
+/// @param arduinoPin arduinio pin number D0 - D9 supported
 /// @param prescaler required prescaler setting
 /// @param duty duty value, must be less than top, from 0 to this output is HIGH
 /// @param top value at which output is reset to LOW, min value is 2, max depends on TCC allocated to this pin 24 bit for TCC0 & 1, 16 bit for TCC2
@@ -248,12 +249,13 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	{
 		return false;
 	}
-	m_pin		= arduinoPin;
+	m_pin = arduinoPin;
+	digitalWrite ( m_pin, LOW ); // default to LOW
 	m_prescaler = prescaler;
 	// validation
-	m_top		= max ( top, (uint32_t)2 );												  // 2 is the smallest value
+	m_top		= max ( top, (uint32_t)2 );											// 2 is the smallest value
 	m_top		= min ( m_top, PWMTimerInfo [ pPWMData->timerIndex ].counterSize ); // ensure top does not exceed max counter size
-	m_duty		= min ( duty, m_top );											  // duty must be smaller than top
+	m_duty		= min ( duty, m_top );												// duty must be smaller than top
 #ifdef DEBUG
 	Serial.print ( "PWM set to prescaler = " );
 	Serial.print ( m_prescaler );
@@ -293,10 +295,10 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	// TCC1 has 2 24 bit channels (CCn) that map to 4 waveform outouts (WOn)
 	// TCC2 has 2 16 bit channels (CCn) that map to 2 waveform outouts (WOn)
 
-	SetPWMType ( TCC_WAVE_WAVEGEN_NPWM ); // Single-slope PWM
+	SetPWMType ( TCC_WAVE_WAVEGEN_NPWM ); // Single-slope PWM (aka Fast PWM, aka Normal PWM)
 
 	SetPWMTop ( m_top );
-
+	SetPWMWhenStopped ( LOW );
 	// convert prescaler value to const used by TCC
 	uint8_t i;
 	for ( i = 0; i < sizeof ( PreScalarsList ) / sizeof ( PreScalarsList [ 0 ] ); i++ )
@@ -310,11 +312,12 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 	{
 		i = 0;
 	}
+	// Set PWM signal to LOW when PWM stopped
 	// set prescaler & enable
 	*(RwReg *)PWMTimerInfo [ pPWMData->timerIndex ].REG_TCCx_CTRLA |= PreScalarsList [ i ].Ref | TCC_CTRLA_ENABLE; // Requires SYNC on CTRLA
 
 	SetDuty ( m_duty, pPWMData );
-	m_bIsStarted = true;
+	m_bIsRunning = true;
 
 	// See if user has provided a function to be called when either an overflow or match occurs
 	if ( OverflowFn != nullptr || MatchFn != nullptr )
@@ -328,64 +331,113 @@ bool MNPWMLib::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty
 		pwmCallbacks.Set ( MatchFn, OverflowFn, pPWMData->timerIndex, pPWMData->MCx );
 		if ( OverflowFn != nullptr )
 		{
-			( (Tcc *)( PWMTimerInfo [ pPWMData->timerIndex ].TCCx ) )->INTENSET.bit.OVF = 1; // Enable Interrupts when time counter reaches TOP
+			( (Tcc *)pin2Tcc ( m_pin ) )->INTENSET.bit.OVF = 1; // Enable Interrupts when time counter reaches TOP
 		}
 		if ( MatchFn != nullptr )
 		{
-			( (Tcc *)( PWMTimerInfo [ pPWMData->timerIndex ].TCCx ) )->INTENSET.vec.MC = 1 << pPWMData->MCx; // Enable interrupts when timer counter matches duty value
+			( (Tcc *)pin2Tcc ( m_pin ) )->INTENSET.vec.MC = 1 << pPWMData->MCx; // Enable interrupts when timer counter matches duty value
 		}
 	}
 	return true;
 }
 
+/// @brief Controls the state of the pin when PWM is stopped
+/// @param defaultState set to HIGH or LOW as required
+void MNPWMLib::SetPWMWhenStopped ( PinStatus defaultState )
+{
+	// Ensure that when PWM is stopped it keeps the signal LOW
+	// TCC0->DRVCTRL.vec.NRV &= ~(1 << 5 );
+	// TCC0->DRVCTRL.vec.NRE |= 1 << 5;
+	// TCC0->DRVCTRL.vec.NRV = 0b00000000;
+	// TCC0->DRVCTRL.vec.NRE = 0b00100000;
+	// TCC0->DRVCTRL.bit.NRV5 = LOW;
+	// TCC0->DRVCTRL.bit.NRE5 = TRUE;
+	PWMPinData *pInfo = GetPinInfo ( m_pin );
+	if ( pInfo != nullptr )
+	{
+		if ( defaultState == HIGH )
+		{
+			( (Tcc *)pin2Tcc ( m_pin ) )->DRVCTRL.vec.NRV |= ( 1 << pInfo->WOn );
+		}
+		else
+		{
+			( (Tcc *)pin2Tcc ( m_pin ) )->DRVCTRL.vec.NRV &= ~( 1 << pInfo->WOn );
+		}
+		EnablePinStateWhenStopped ();
+	}
+}
+
+/// @brief Allows the state of the pin (ie HIGH or LOW) to be defined when PWM clock is stopped
+/// @param pin
+inline void MNPWMLib::EnablePinStateWhenStopped ()
+{
+	PWMPinData *pInfo = GetPinInfo ( m_pin );
+	if ( pInfo != nullptr )
+	{
+		( (Tcc *)pin2Tcc ( m_pin ) )->DRVCTRL.vec.NRE |= ( 1 << pInfo->WOn ); // enable
+	}
+}
+
+/// @brief Allow the PWM outpin to be undefined when PWM is stopped
+/// @param pin
+inline void MNPWMLib::DisablePinStateWhenStopped ()
+{
+	PWMPinData *pInfo = GetPinInfo ( m_pin );
+	if ( pInfo != nullptr )
+	{
+		( (Tcc *)pin2Tcc ( m_pin ) )->DRVCTRL.vec.NRE &= ~( 1 << pInfo->WOn ); // enable
+	}
+}
+
 inline void MNPWMLib::SyncCtrlBReg ()
 {
-	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.CTRLB )
+	pin2TCCIndex ( m_pin );
+	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.CTRLB )
 		; // Wait for synchronization
 }
 
 inline void MNPWMLib::SetPWMType ( uint32_t PWMType )
 {
-	*(RwReg *)PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].REG_TCCx_WAVE |= PWMType; // Single-slope PWM
-	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.WAVE )
+	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_WAVE |= PWMType; // Single-slope PWM
+	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.WAVE )
 		; // Wait for synchronization
 }
 
 inline void MNPWMLib::SetPWMTop ( uint32_t PWMTop )
 {
-	*(RwReg *)PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].REG_TCCx_PER = PWMTop;
-	while ( ( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->SYNCBUSY.bit.PERB )
+	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_PER = PWMTop;
+	while ( ( (Tcc *)pin2Tcc ( m_pin ) )->SYNCBUSY.bit.PERB )
 		; // Wait for synchronization
 }
 
 /// @brief Checks if PWM is running
 /// @return true if running, false otherwise
-bool MNPWMLib::IsStarted ()
+bool MNPWMLib::IsRunning ()
 {
-	return m_bIsStarted;
+	return m_bIsRunning;
 }
 
 /// @brief Disables TCC
 void MNPWMLib::StopPWM ()
 {
 	// Stops timer so all pins using it will be impacted! Better to set duty = 2 or top?
-	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_STOP; // Stop the timer
+	( (Tcc *)pin2Tcc ( m_pin ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_STOP; // Stop the timer
 	SyncCtrlBReg ();
-	m_bIsStarted = false;
+	m_bIsRunning = false;
 }
 
 void MNPWMLib::RestartPWM ()
 {
-	( (Tcc *)( PWMTimerInfo [ PWMPinInfo [ m_pin ].timerIndex ].TCCx ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart a stopped timer or reset a stopped one
+	( (Tcc *)pin2Tcc ( m_pin ) )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart a stopped timer or reset a stopped one
 	SyncCtrlBReg ();
-	m_bIsStarted = true;
+	m_bIsRunning = true;
 }
 
 /// @brief Enables TCC
 void MNPWMLib::StartPWM ()
 {
-	*(RwReg *)PWMTimerInfo [ m_pin ].REG_TCCx_CTRLA |= TCC_CTRLA_ENABLE;
-	while ( PWMTimerInfo [ m_pin ].TCCx->SYNCBUSY.bit.ENABLE )
+	*(RwReg *)PWMTimerInfo [ pin2TCCIndex ( m_pin ) ].REG_TCCx_CTRLA |= TCC_CTRLA_ENABLE;
+	while ( pin2Tcc ( m_pin )->SYNCBUSY.bit.ENABLE )
 		;
 }
 
@@ -402,9 +454,14 @@ inline uint32_t MNPWMLib::pin2SAMD21 ( pin_size_t arduinoPin )
 /// @brief Find the TCC allocated to the pin, note there is one TOP value per TCC
 /// @param arduinoPin to check, must be 0 - 9
 /// @return index of TCC ie 0 - 2 inclusive
-inline uint8_t MNPWMLib::pin2TCCx ( pin_size_t arduinoPin )
+inline uint8_t MNPWMLib::pin2TCCIndex ( pin_size_t arduinoPin )
 {
-	return PWMPinInfo [ PinData ( arduinoPin ) ].timerIndex;
+	return PWMPinInfo [ arduinoPin ].timerIndex;
+}
+
+inline const Tcc *MNPWMLib::pin2Tcc ( pin_size_t arduinoPin )
+{
+	return PWMTimerInfo [ pin2TCCIndex ( arduinoPin ) ].TCCx;
 }
 
 /// @brief Find the CC allocated to the pin
@@ -423,10 +480,10 @@ inline uint32_t MNPWMLib::pin2MaxTop ( pin_size_t arduinoPin )
 	uint32_t	result	= 0UL;
 
 	// public function so validate parameter
-	PWMPinData *pinData = GetPinInfo ( arduinoPin );
-	if ( pinData != nullptr )
+	PWMPinData *pinInfo = GetPinInfo ( arduinoPin );
+	if ( pinInfo != nullptr )
 	{
-		result = PWMTimerInfo [ pinData->timerIndex ].counterSize;
+		result = PWMTimerInfo [ pinInfo->timerIndex ].counterSize;
 	}
 	return result;
 }
@@ -503,7 +560,7 @@ bool MNPWMLib::BestFit ( pin_size_t arduinoPin, uint16_t wantedFreq, uint16_t &p
 
 inline uint32_t MNPWMLib::pin2PortMUX ( pin_size_t arduinoPin )
 {
-	return PWMPinInfo [ PinData ( arduinoPin ) ].Mux;
+	return PWMPinInfo [ arduinoPin ].Mux;
 }
 
 /// @brief returns the index for the supplied arduino pin number
@@ -536,7 +593,7 @@ PWMPinData *MNPWMLib::GetPinInfo ( pin_size_t arduinoPin )
 void MNPWMLib::SetDuty ( uint32_t duty, PWMPinData *pData )
 {
 	*(RwReg *)pData->REG_TCCx_CCBy = duty;
-	while ( PWMTimerInfo [ pData->timerIndex ].TCCx->SYNCBUSY.vec.CCB )
+	while ( pin2Tcc ( m_pin )->SYNCBUSY.vec.CCB )
 		;
 }
 
