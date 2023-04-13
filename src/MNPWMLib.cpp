@@ -83,14 +83,14 @@ namespace MN ::PWMLib
 		}
 
 		digitalWrite ( m_pin, LOW ); // default to LOW
-		m_pin																						   = arduinoPin;
+		m_pin		= arduinoPin;
 		// prescalar is associated with TCC object and will be saved there when configured
 
-		m_prescaler																					   = prescaler;
+		m_prescaler = prescaler;
 		// ensure duty and top are sanitised before continuing
-		m_top																						   = max ( top, (uint32_t)2 );					  // 2 is the smallest value
-		m_top																						   = min ( m_top, m_pTCCData->GetCounterMax () ); // ensure top does not exceed max counter size of related TCC
-		m_duty																						   = min ( duty, m_top );						  // duty must be smaller than top
+		m_top		= max ( top, (uint32_t)2 );					   // 2 is the smallest value
+		m_top		= min ( m_top, m_pTCCData->GetCounterMax () ); // ensure top does not exceed max counter size of related TCC
+		m_duty		= min ( duty, m_top );						   // duty must be smaller than top
 
 		// Step 2, now route the generated clock signal to the TCC (Timer Counter for Control) module
 		m_pPinData->RouteClockToPin ();
@@ -108,12 +108,12 @@ namespace MN ::PWMLib
 		m_pTCCData->SetPrescaler ( prescaler );
 
 		// set duty (counter match level)
-		 m_pPinData->SetDuty ( m_duty );
+		m_pPinData->SetDuty ( m_duty );
 
 		// See if user has provided a function to be called when either an overflow or match occurs
 		if ( OverflowFn != nullptr || MatchFn != nullptr )
 		{
-			m_pTCCData->EnableInterrupts ();	
+			m_pTCCData->EnableInterrupts ();
 			pwmCallbacks.Set ( MatchFn, OverflowFn, m_pPinData->GetTCCIndex (), m_pPinData->GetMC () );
 			if ( OverflowFn != nullptr )
 			{
@@ -136,10 +136,9 @@ namespace MN ::PWMLib
 	/// @brief Disables TCC
 	void MNPWM::StopPWM ()
 	{
-		RefData::TCC *pTCCData = RefData::PWMPinDataList::pin2TCCData ( m_pin );
-		if ( pTCCData != nullptr )
+		if ( m_pTCCData != nullptr )
 		{
-			pTCCData->Stop ();
+			m_pTCCData->Stop ();
 		}
 		m_bIsRunning = false;
 	}
@@ -147,10 +146,9 @@ namespace MN ::PWMLib
 	/// @brief Restarts the TCC clock
 	void MNPWM::RestartPWM ()
 	{
-		RefData::TCC *pTCCData = RefData::PWMPinDataList::pin2TCCData ( m_pin );
-		if ( pTCCData != nullptr )
+		if ( m_pTCCData != nullptr )
 		{
-			pTCCData->Restart ();
+			m_pTCCData->Restart ();
 		}
 		m_bIsRunning = true;
 	}
@@ -158,10 +156,9 @@ namespace MN ::PWMLib
 	/// @brief Enables TCC
 	void MNPWM::StartPWM ()
 	{
-		RefData::TCC *pTCCData = RefData::PWMPinDataList::pin2TCCData ( m_pin );
-		if ( pTCCData != nullptr )
+		if ( m_pTCCData != nullptr )
 		{
-			pTCCData->Start ();
+			m_pTCCData->Start ();
 		}
 	}
 
@@ -217,6 +214,7 @@ namespace MN ::PWMLib
 		}
 		return result;
 	}
+
 	bool MNPWM::bInitialised = false;
 } // namespace MN::PWMLib
 

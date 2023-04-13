@@ -27,6 +27,7 @@ namespace MN ::PWMLib
 	#define NOT_A_PIN 255
 #endif
 	/* defines data used to set up PWM for arduino mkr wifi 1010 pins D0 to D9 inclusive */
+/*
 	typedef struct
 	{
 			const pin_size_t arduinoPin;	// Arduino pin number
@@ -38,23 +39,16 @@ namespace MN ::PWMLib
 			const uint32_t	 Mux;			// Pin multiplexer for this pin
 			const uint8_t	 WOn;			// Waveform output # for this pin
 	} PWMPinData;
-
+*/
 	class MNPWM
 	{
 		public:
 			MNPWM ( uint16_t ClockDivisor = 1 );
 			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
-			// bool	 SetPWM2 ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
 			void StopPWM ();
 			void RestartPWM ();
 			void StartPWM ();
-			// bool	 IsRunning ();
-			// uint32_t pin2MaxTop ( pin_size_t arduinoPin );
-			// uint8_t	 pin2CCx ( pin_size_t arduinoPin );
 			bool BestFit ( pin_size_t arduinoPin, uint16_t wantedFreq, uint16_t &prescaler, uint32_t &top );
-			// void	 DisablePinStateWhenStopped ();
-			// void	 EnablePinStateWhenStopped ();
-			// void	 SetPWMWhenStopped ( PinStatus defaultState );
 
 		private:
 			static bool			 bInitialised; // Used to indicate initialisation of TCC done
@@ -67,18 +61,5 @@ namespace MN ::PWMLib
 			bool				 m_bIsRunning;
 			RefData::PWMPinData *m_pPinData = nullptr;
 			RefData::TCC		*m_pTCCData = nullptr;
-			;
-			// int8_t		pin2Port ( pin_size_t arduinoPin );
-			// uint32_t	pin2SAMD21 ( pin_size_t arduinoPin );
-			// uint32_t	pin2PortMUX ( pin_size_t arduinoPin );
-			// uint8_t		PinData ( uint8_t arduinoPin );
-			// uint8_t		pin2TCCIndex ( pin_size_t arduinoPin );
-			// const Tcc  *pin2Tcc ( pin_size_t arduinoPin );
-			// PWMPinData *GetPinInfo ( pin_size_t arduinoPin );
-			// void		SetDuty ( uint32_t duty, PWMPinData *pData );
-			// void		SyncCtrlBReg ();
-			// void		SetPWMType ( uint32_t PWMType );
-			// void		SetPWMTop ( uint32_t PWMTop );
-			// void		SetCount ( uint32_t count );
 	};
 } // namespace MN::PWMLib
