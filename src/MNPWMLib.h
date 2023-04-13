@@ -1,6 +1,8 @@
 #pragma once
 #include <Arduino.h>
+#include "PWMRefData.h"
 #include "MNPrescaler.h"
+
 /*
 	PWMLib.h
 
@@ -17,7 +19,7 @@
 */
 namespace MN ::PWMLib
 {
-	
+
 #ifndef pin_size_t
 	typedef uint8_t pin_size_t;
 #endif
@@ -40,39 +42,43 @@ namespace MN ::PWMLib
 	class MNPWM
 	{
 		public:
-			MNPWM ( uint8_t ClockDivisor = 1 );
-			bool	 SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
-			void	 StopPWM ();
-			void	 RestartPWM ();
-			void	 StartPWM ();
-			bool	 IsRunning ();
-			uint32_t pin2MaxTop ( pin_size_t arduinoPin );
-			uint8_t	 pin2CCx ( pin_size_t arduinoPin );
-			bool	 BestFit ( pin_size_t arduinoPin, uint16_t wantedFreq, uint16_t &prescaler, uint32_t &top );
-			void	 DisablePinStateWhenStopped ();
-			void	 EnablePinStateWhenStopped ();
-			void	 SetPWMWhenStopped ( PinStatus defaultState );
+			MNPWM ( uint16_t ClockDivisor = 1 );
+			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
+			// bool	 SetPWM2 ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
+			void StopPWM ();
+			void RestartPWM ();
+			void StartPWM ();
+			// bool	 IsRunning ();
+			// uint32_t pin2MaxTop ( pin_size_t arduinoPin );
+			// uint8_t	 pin2CCx ( pin_size_t arduinoPin );
+			bool BestFit ( pin_size_t arduinoPin, uint16_t wantedFreq, uint16_t &prescaler, uint32_t &top );
+			// void	 DisablePinStateWhenStopped ();
+			// void	 EnablePinStateWhenStopped ();
+			// void	 SetPWMWhenStopped ( PinStatus defaultState );
 
 		private:
-			static bool bInitialised; // Used to indicate initialisation of TCC done
-			pin_size_t	m_pin = NOT_A_PIN;
-			uint32_t	m_top;
-			uint32_t	m_duty;
-			uint16_t	m_frequency;
-			uint16_t	m_prescaler;
-			uint8_t		m_clockDivisor;
-			bool		m_bIsRunning;
-			int8_t		pin2Port ( pin_size_t arduinoPin );
-			uint32_t	pin2SAMD21 ( pin_size_t arduinoPin );
-			uint32_t	pin2PortMUX ( pin_size_t arduinoPin );
-			uint8_t		PinData ( uint8_t arduinoPin );
-			uint8_t		pin2TCCIndex ( pin_size_t arduinoPin );
-			const Tcc  *pin2Tcc ( pin_size_t arduinoPin );
-			PWMPinData *GetPinInfo ( pin_size_t arduinoPin );
-			void		SetDuty ( uint32_t duty, PWMPinData *pData );
-			void		SyncCtrlBReg ();
-			void		SetPWMType ( uint32_t PWMType );
-			void		SetPWMTop ( uint32_t PWMTop );
-			void		SetCount ( uint32_t count );
+			static bool			 bInitialised; // Used to indicate initialisation of TCC done
+			pin_size_t			 m_pin = NOT_A_PIN;
+			uint32_t			 m_top;
+			uint32_t			 m_duty;
+			uint16_t			 m_frequency;
+			uint16_t			 m_prescaler;
+			uint16_t			 m_clockDivisor; // maybe a static data item set once
+			bool				 m_bIsRunning;
+			RefData::PWMPinData *m_pPinData = nullptr;
+			RefData::TCC		*m_pTCCData = nullptr;
+			;
+			// int8_t		pin2Port ( pin_size_t arduinoPin );
+			// uint32_t	pin2SAMD21 ( pin_size_t arduinoPin );
+			// uint32_t	pin2PortMUX ( pin_size_t arduinoPin );
+			// uint8_t		PinData ( uint8_t arduinoPin );
+			// uint8_t		pin2TCCIndex ( pin_size_t arduinoPin );
+			// const Tcc  *pin2Tcc ( pin_size_t arduinoPin );
+			// PWMPinData *GetPinInfo ( pin_size_t arduinoPin );
+			// void		SetDuty ( uint32_t duty, PWMPinData *pData );
+			// void		SyncCtrlBReg ();
+			// void		SetPWMType ( uint32_t PWMType );
+			// void		SetPWMTop ( uint32_t PWMTop );
+			// void		SetCount ( uint32_t count );
 	};
 } // namespace MN::PWMLib
