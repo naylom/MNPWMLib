@@ -1,9 +1,16 @@
 #include "PWMRefData.h"
 #include "MNPrescaler.h"
 
+/*
+	PWMRefData.cpp
+
+	implements classes that hold PWM reference data as it relates to the three TCC timers and separately for each of the supported pins how they relate to which TCC functions
+
+*/
+
 namespace MN::PWMLib::RefData
 {
-	TCC::TCC ( Tcc *pTcc, RwReg *pCtrlAReg, RwReg *pWaveReg, RwReg *pPerReg, IRQn IRQN, uint32_t counterMax, uint16_t div, uint32_t steps, bool Configured ) : m_IRQn ( IRQN ), m_counterMax ( counterMax )
+	TCC::TCC ( Tcc *pTcc, RwReg *pCtrlAReg, RwReg *pWaveReg, RwReg *pPerReg, IRQn IRQN, uint32_t counterMax, uint32_t steps, bool Configured ) : m_IRQn ( IRQN ), m_counterMax ( counterMax )
 	{
 		m_pTcc		 = pTcc;
 		m_pCtrlAReg	 = pCtrlAReg;
@@ -145,11 +152,8 @@ namespace MN::PWMLib::RefData
 
 	void TCC::SetPWMType ( uint32_t type )
 	{
-		//*(RwReg *)m_pWaveReg |= type;
-		REG_TCC0_WAVE |= TCC_WAVE_WAVEGEN_NPWM; // OK
-		while ( TCC0->SYNCBUSY.bit.WAVE )
-			;
-		// SyncWave ();
+		*(RwReg *)m_pWaveReg |= type;
+		SyncWave ();
 	}
 
 	void TCC::SyncWave ()
@@ -169,7 +173,7 @@ namespace MN::PWMLib::RefData
 
 	void TCCList::ClearAll ()
 	{
-		for ( uint8_t i; i < MAX_TCC; i++ )
+		for ( uint8_t i = 0; i < MAX_TCC; i++ )
 		{
 			m_list [ i ].Clear ();
 		}
@@ -205,10 +209,7 @@ namespace MN::PWMLib::RefData
 	}
 
 	void PWMPinData::RouteClockToPin ()
-	{ // OK
-		// PORT->Group [ g_APinDescription [ 1 ].ulPort ].PINCFG [ g_APinDescription [ 1 ].ulPin ].reg	 |= PORT_PINCFG_PMUXEN;
-		// PORT->Group [ g_APinDescription [ 1 ].ulPort ].PMUX [ g_APinDescription [ 1 ].ulPin >> 1 ].reg |= PORT_PMUX_PMUXO_F; // Even pin to peripheral function E
-
+	{
 		PORT->Group [ m_port ].PINCFG [ m_samd21Pin ].reg	 |= PORT_PINCFG_PMUXEN; // set pin to use mux
 		PORT->Group [ m_port ].PMUX [ m_samd21Pin >> 1 ].reg |= m_Mux;				// set specific mux for this pin, different mux for odd and even pins based on samd21 pin numbers
 	}
@@ -247,7 +248,7 @@ namespace MN::PWMLib::RefData
 
 	PWMPinData *PWMPinDataList::pin2PinData ( pin_size_t ArduinoPin )
 	{
-		PWMPinData *result;
+		PWMPinData *result = nullptr;
 		if ( ArduinoPin < MAX_PWM_PINS )
 		{
 			result = &m_list [ ArduinoPin ];
@@ -256,15 +257,13 @@ namespace MN::PWMLib::RefData
 	}
 
 	// prepopulated table of TCC data
-
 	TCC TCCList::m_list [ MAX_TCC ] = {
-		{TCC0,	&REG_TCC0_CTRLA, &REG_TCC0_WAVE, &REG_TCC0_PER, TCC0_IRQn, (uint32_t)0xFFFFFF, (uint16_t)1, 500000UL, true},
-		{ TCC1, &REG_TCC1_CTRLA, &REG_TCC1_WAVE, &REG_TCC1_PER, TCC1_IRQn, (uint32_t)0xFFFFFF, (uint16_t)1, 500000UL, true},
-		{ TCC2, &REG_TCC2_CTRLA, &REG_TCC2_WAVE, &REG_TCC2_PER, TCC2_IRQn, (uint32_t)0x00FFFF, (uint16_t)1, 50000UL,	 true}
+		{TCC0,	&REG_TCC0_CTRLA, &REG_TCC0_WAVE, &REG_TCC0_PER, TCC0_IRQn, (uint32_t)0xFFFFFF, 500000UL, true},
+		{ TCC1, &REG_TCC1_CTRLA, &REG_TCC1_WAVE, &REG_TCC1_PER, TCC1_IRQn, (uint32_t)0xFFFFFF, 500000UL, true},
+		{ TCC2, &REG_TCC2_CTRLA, &REG_TCC2_WAVE, &REG_TCC2_PER, TCC2_IRQn, (uint32_t)0x00FFFF, 50000UL,	true}
 	};
 
 	// prepopulated table of PWM data for arduino pins  *** MUST BE IN ARDUINO PIN NUMBER ORDER WITH NO GAPS ***
-
 	PWMPinData PWMPinDataList::m_list [ MAX_PWM_PINS ] = {
 		{0,	 g_APinDescription [ 0 ].ulPort, g_APinDescription [ 0 ].ulPin, 0, &REG_TCC0_CCB0, 0, PORT_PMUX_PMUXE_F, 4}, // Pin D0
 		{ 1, g_APinDescription [ 1 ].ulPort, g_APinDescription [ 1 ].ulPin, 0, &REG_TCC0_CCB1, 1, PORT_PMUX_PMUXO_F, 5}, // Pin D1

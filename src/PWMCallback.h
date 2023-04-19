@@ -12,8 +12,21 @@ namespace MN::PWMLib
 	// Table definition for holding which match and overflow functions are associated with which TCCx and its related match buffer CCBy
 	typedef struct
 	{
-			voidFuncPtr OverflowFn;
-			voidFuncPtr MatchFn;
+			union
+			{
+					voidFuncPtr		 OverflowFn;
+					voidFuncPtrParam OverflowFnParam;
+			};
+
+			void *OverflowParam;
+
+			union
+			{
+					voidFuncPtr		 MatchFn;
+					voidFuncPtrParam MatchFnParam;
+			};
+
+			void *MatchParam;
 	} PWMPinCallbacks;
 
 	constexpr uint8_t MAX_TCC = 3;
@@ -24,6 +37,7 @@ namespace MN::PWMLib
 		public:
 			PWMCallback ();
 			static bool Set ( voidFuncPtr matchFn, voidFuncPtr overflowFn, uint8_t TCC, uint8_t CCB );
+			static bool Set ( voidFuncPtrParam matchFnParam, voidFuncPtrParam overflowFnParam, uint8_t TCC, uint8_t CCB, void *MatchParam = nullptr, void *OverflowParam = nullptr );
 			static void Overflow ( ::Tcc *pTCC, RwReg CCB );
 			static void Match ( ::Tcc *pTCC, RwReg CCB );
 

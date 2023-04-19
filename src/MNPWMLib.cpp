@@ -133,6 +133,67 @@ namespace MN ::PWMLib
 		return true;
 	}
 
+	bool MNPWM::SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtrParam OverflowFn, voidFuncPtrParam MatchFn, void *OverflowParam, void *MatchParam )
+	{
+		// get pin and related TCC data
+		m_pPinData = RefData::PWMPinDataList::pin2PinData ( arduinoPin );
+		if ( m_pPinData == nullptr )
+		{
+			// unsupported pin
+			return false;
+		}
+		m_pTCCData = RefData::PWMPinDataList::pin2TCCData ( arduinoPin );
+		if ( m_pTCCData == nullptr )
+		{
+			// unsupported pin
+			m_pPinData = nullptr;
+			return false;
+		}
+
+		digitalWrite ( m_pin, LOW ); // default to LOW
+		m_pin		= arduinoPin;
+		// prescalar is associated with TCC object and will be saved there when configured
+
+		m_prescaler = prescaler;
+		// ensure duty and top are sanitised before continuing
+		m_top		= max ( top, (uint32_t)2 );					   // 2 is the smallest value
+		m_top		= min ( m_top, m_pTCCData->GetCounterMax () ); // ensure top does not exceed max counter size of related TCC
+		m_duty		= min ( duty, m_top );						   // duty must be smaller than top
+
+		// Step 2, now route the generated clock signal to the TCC (Timer Counter for Control) module
+		m_pPinData->RouteClockToPin ();
+
+		m_pPinData->SetSignalWhenStopped ( LOW );
+
+		m_pTCCData->SetPWMType ( TCC_WAVE_WAVEGEN_NPWM ); // Single-slope PWM (aka Fast PWM, aka Normal PWM)
+
+		m_pTCCData->SetTop ( m_top );
+
+		// Set PWM signal to go LOW when PWM stopped
+		m_pPinData->SetSignalWhenStopped ( LOW );
+
+		// set prescaler
+		m_pTCCData->SetPrescaler ( prescaler );
+
+		// set duty (counter match level)
+		m_pPinData->SetDuty ( m_duty );
+
+		// See if user has provided a function to be called when either an overflow or match occurs
+		if ( OverflowFn != nullptr || MatchFn != nullptr )
+		{
+			m_pTCCData->EnableInterrupts ();
+			pwmCallbacks.Set ( MatchFn, OverflowFn, m_pPinData->GetTCCIndex (), m_pPinData->GetMC (), MatchParam, OverflowParam );
+			if ( OverflowFn != nullptr )
+			{
+				m_pTCCData->EnableOverflow ();
+			}
+			if ( MatchFn != nullptr )
+			{
+				m_pTCCData->EnableMatch ( m_pPinData->GetMC () );
+			}
+		}
+	}
+
 	/// @brief Disables TCC
 	void MNPWM::StopPWM ()
 	{

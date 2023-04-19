@@ -15,7 +15,7 @@ namespace MN::PWMLib::RefData
 	class TCC
 	{
 		public:
-			TCC ( Tcc *pTcc, RwReg *pCtrlAReg, RwReg *pWaveReg, RwReg *pPerReg, IRQn IRQN, uint32_t counterMax, uint16_t div, uint32_t steps, bool Configured );
+			TCC ( Tcc *pTcc, RwReg *pCtrlAReg, RwReg *pWaveReg, RwReg *pPerReg, IRQn IRQN, uint32_t counterMax, uint32_t steps, bool Configured );
 			void	 SetPrescaler ( uint16_t prescaler );
 			uint16_t GetPrescaler ();
 			uint32_t GetCounterMax ();

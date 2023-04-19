@@ -4,7 +4,7 @@
 #include "MNPrescaler.h"
 
 /*
-	PWMLib.h
+	MNPWMLib.h
 
 	defines pwm class for mkr wifi 1010
 
@@ -27,24 +27,12 @@ namespace MN ::PWMLib
 	#define NOT_A_PIN 255
 #endif
 	/* defines data used to set up PWM for arduino mkr wifi 1010 pins D0 to D9 inclusive */
-/*
-	typedef struct
-	{
-			const pin_size_t arduinoPin;	// Arduino pin number
-			const int8_t	 port;			// Port of the SAMD21 pin
-			const uint32_t	 samd21Pin;		// SAMD21 pin
-			const uint8_t	 timerIndex;	// TimerLookup index used for this pin
-			const RwReg		*REG_TCCx_CCBy; // Pointer to count register used for this pin
-			const uint8_t	 MCx;			// MCx bit
-			const uint32_t	 Mux;			// Pin multiplexer for this pin
-			const uint8_t	 WOn;			// Waveform output # for this pin
-	} PWMPinData;
-*/
 	class MNPWM
 	{
 		public:
 			MNPWM ( uint16_t ClockDivisor = 1 );
 			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
+			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtrParam OverflowFn = nullptr, voidFuncPtrParam MatchFn = nullptr, void * OverflowParam = nullptr, void * MatchParam = nullptr );
 			void StopPWM ();
 			void RestartPWM ();
 			void StartPWM ();
