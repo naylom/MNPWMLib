@@ -108,7 +108,7 @@ namespace MN::PWMLib::RefData
 	void TCC::Restart ()
 	{
 		ResetCount ();
-		( (::Tcc *)m_pTcc )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Stop the timer
+		( (::Tcc *)m_pTcc )->CTRLBSET.reg = TCC_CTRLBCLR_CMD_RETRIGGER; // Restart the timer
 		SyncCtrlBReg ();
 
 		m_Running = true;

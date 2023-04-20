@@ -31,8 +31,9 @@ namespace MN ::PWMLib
 	{
 		public:
 			MNPWM ( uint16_t ClockDivisor = 1 );
+			bool IsRunning ();
 			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtr OverflowFn = nullptr, voidFuncPtr MatchFn = nullptr );
-			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtrParam OverflowFn = nullptr, voidFuncPtrParam MatchFn = nullptr, void * OverflowParam = nullptr, void * MatchParam = nullptr );
+			bool SetPWM ( pin_size_t arduinoPin, uint16_t prescaler, uint32_t duty, uint32_t top, voidFuncPtrParam OverflowFn = nullptr, voidFuncPtrParam MatchFn = nullptr, void *OverflowParam = nullptr, void *MatchParam = nullptr );
 			void StopPWM ();
 			void RestartPWM ();
 			void StartPWM ();
@@ -46,8 +47,8 @@ namespace MN ::PWMLib
 			uint16_t			 m_frequency;
 			uint16_t			 m_prescaler;
 			uint16_t			 m_clockDivisor; // maybe a static data item set once
-			bool				 m_bIsRunning;
-			RefData::PWMPinData *m_pPinData = nullptr;
-			RefData::TCC		*m_pTCCData = nullptr;
+			bool				 m_bIsRunning = false;
+			RefData::PWMPinData *m_pPinData	  = nullptr;
+			RefData::TCC		*m_pTCCData	  = nullptr;
 	};
 } // namespace MN::PWMLib

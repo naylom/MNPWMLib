@@ -39,7 +39,7 @@ namespace MN::PWMLib
 		bool result = false;
 		// check no callbacks already assigned
 		if ( m_PWMcallbackList [ TCC ][ CCB ].MatchFn == nullptr && m_PWMcallbackList [ TCC ][ CCB ].OverflowFn == nullptr )
-		{
+		{	
 			m_PWMcallbackList [ TCC ][ CCB ].MatchFnParam	 = matchFnParam;
 			m_PWMcallbackList [ TCC ][ CCB ].MatchParam		 = MatchParam;
 			m_PWMcallbackList [ TCC ][ CCB ].OverflowFnParam = overflowFnParam;
@@ -82,7 +82,7 @@ namespace MN::PWMLib
 		if ( m_PWMcallbackList [ indexTCC ][ indexCCB ].MatchFn != nullptr )
 		{
 			// see if callback expects a parameter or not
-			if ( m_PWMcallbackList [ indexTCC ][ indexCCB ].OverflowParam == nullptr )
+			if ( m_PWMcallbackList [ indexTCC ][ indexCCB ].MatchParam == nullptr )
 			{
 				m_PWMcallbackList [ indexTCC ][ indexCCB ].MatchFn ();
 			}

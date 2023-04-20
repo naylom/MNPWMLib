@@ -57,6 +57,11 @@ namespace MN ::PWMLib
 		}
 	}
 
+	bool MNPWM::IsRunning ()
+	{
+		return m_bIsRunning;
+	}
+
 	/// @brief Called to start PWM on a given arduino pin
 	/// @param arduinoPin arduinio pin number D0 - D9 supported
 	/// @param prescaler required prescaler setting
@@ -94,8 +99,6 @@ namespace MN ::PWMLib
 
 		// Step 2, now route the generated clock signal to the TCC (Timer Counter for Control) module
 		m_pPinData->RouteClockToPin ();
-
-		m_pPinData->SetSignalWhenStopped ( LOW );
 
 		m_pTCCData->SetPWMType ( TCC_WAVE_WAVEGEN_NPWM ); // Single-slope PWM (aka Fast PWM, aka Normal PWM)
 
