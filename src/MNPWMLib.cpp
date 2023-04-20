@@ -195,6 +195,14 @@ namespace MN ::PWMLib
 				m_pTCCData->EnableMatch ( m_pPinData->GetMC () );
 			}
 		}
+
+		m_pTCCData->Enable ();
+
+		// set TCC state
+		m_pTCCData->SetRunning ( true );
+		m_pTCCData->SetConfigured ( true );
+				
+		return true;
 	}
 
 	/// @brief Disables TCC
